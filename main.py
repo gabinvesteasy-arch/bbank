@@ -115,7 +115,7 @@ with app.app_context():
         try:
             admin = User(
                 username='admin',
-                email='admin@simplebank.com',
+                email='gabinvesteasy@gmail.com',  # ← ИЗМЕНЕНО: ваш email
                 password_hash=generate_password_hash('admin123'),
                 is_admin=True
             )
@@ -131,6 +131,7 @@ with app.app_context():
             db.session.add(admin_account)
             db.session.commit()
             print("✅ Admin user created: admin / admin123")
+            print("📧 Admin email: gabinvesteasy@gmail.com")
         except Exception as e:
             db.session.rollback()
             print(f"❌ Error creating admin: {e}")
@@ -138,7 +139,7 @@ with app.app_context():
 # Helper functions
 def generate_unique_account_number():
     while True:
-        account_number = f"SB{random.randint(10000000, 99999999)}"
+        account_number = f"WRB{random.randint(10000000, 99999999)}"  # ← ИЗМЕНЕНО: WRB вместо SB
         existing_account = db.session.query(Account).filter_by(account_number=account_number).first()
         if not existing_account:
             return account_number
@@ -239,7 +240,7 @@ def signup():
             # Commit everything
             db.session.commit()
             
-            flash(f'Account created successfully! Account number: {account_number}. Please contact admin to add funds.', 'success')
+            flash(f'Account created successfully! Account number: {account_number}. Please contact admin at gabinvesteasy@gmail.com to add funds.', 'success')  # ← ИЗМЕНЕНО
             return redirect(url_for('login'))
             
         except Exception as e:
@@ -306,12 +307,26 @@ def withdraw_bank():
         account_holder = request.form.get('account_holder', '').strip()
         email = request.form.get('email', '').strip()
         
+        # Custom bank name if "other" is selected
+        if bank_code == 'custom':
+            bank_name = request.form.get('custom_bank_name', '').strip()
+            if not bank_name:
+                flash('Please enter your bank name', 'danger')
+                return redirect(url_for('dashboard'))
+        else:
+            # Find bank name from AVAILABLE_BANKS
+            bank_name = "Unknown Bank"
+            for bank in AVAILABLE_BANKS.get(bank_country, []):
+                if bank['code'] == bank_code:
+                    bank_name = bank['name']
+                    break
+        
         # Validation
         if amount <= 0:
             flash('Amount must be positive', 'danger')
             return redirect(url_for('dashboard'))
         
-        if not all([bank_country, bank_code, account_number, account_holder, email]):
+        if not all([bank_country, account_number, account_holder, email]):
             flash('Please fill all withdrawal details', 'danger')
             return redirect(url_for('dashboard'))
         
@@ -325,13 +340,6 @@ def withdraw_bank():
         if account.balance < amount:
             flash('Insufficient funds', 'danger')
             return redirect(url_for('dashboard'))
-        
-        # Find bank name
-        bank_name = "Unknown Bank"
-        for bank in AVAILABLE_BANKS.get(bank_country, []):
-            if bank['code'] == bank_code:
-                bank_name = bank['name']
-                break
         
         # Create withdrawal request
         withdrawal = Withdrawal(
@@ -573,6 +581,7 @@ if __name__ == '__main__':
         print(f"🚀 Server starting on http://localhost:{port}")
         print(f"🔧 Debug mode: {debug_mode}")
         print("👉 Login as admin: admin / admin123")
+        print("📧 Admin email: gabinvesteasy@gmail.com")
         app.run(host='0.0.0.0', port=port, debug=debug_mode)
     except Exception as e:
         print(f"❌ Error starting server: {e}")
