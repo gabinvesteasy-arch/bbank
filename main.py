@@ -104,33 +104,36 @@ class Withdrawal(db.Model):
     processed_by = db.Column(db.Integer, nullable=True)
     admin_notes = db.Column(db.String(500), nullable=True)
 
-# Create all tables
+# Create all tables - УБРАЛ db.drop_all() для production
 with app.app_context():
-    # Drop all tables if they exist (for clean restart)
-    db.drop_all()
-    # Create all tables
+    # Create all tables (only if they don't exist)
     db.create_all()
     
     # Create admin user if not exists
     admin_exists = db.session.query(User).filter_by(username='admin').first()
     if not admin_exists:
-        admin = User(
-            username='admin',
-            email='admin@simplebank.com',
-            password_hash=generate_password_hash('admin123'),
-            is_admin=True
-        )
-        db.session.add(admin)
-        
-        # Create admin account
-        admin_account = Account(
-            account_number=f"ADMIN{random.randint(10000, 99999)}",
-            user_id=1,  # Admin will have ID 1
-            balance=0.00
-        )
-        db.session.add(admin_account)
-        db.session.commit()
-        print("✅ Admin user created: admin / admin123")
+        try:
+            admin = User(
+                username='admin',
+                email='admin@simplebank.com',
+                password_hash=generate_password_hash('admin123'),
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.flush()  # Get admin ID
+            
+            # Create admin account
+            admin_account = Account(
+                account_number=f"ADMIN{random.randint(10000, 99999)}",
+                user_id=admin.id,
+                balance=0.00
+            )
+            db.session.add(admin_account)
+            db.session.commit()
+            print("✅ Admin user created: admin / admin123")
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Error creating admin: {e}")
 
 # Helper functions
 def generate_unique_account_number():
@@ -232,7 +235,6 @@ def signup():
                 balance=0.00  # Start with $0 - only admin can add money
             )
             db.session.add(new_account)
-            db.session.flush()  # Get account ID without committing
             
             # Commit everything
             db.session.commit()
@@ -565,7 +567,14 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    print(f"🚀 Server starting on http://localhost:{port}")
-    print("👉 Login as admin: admin / admin123")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    try:
+        port = int(os.environ.get('PORT', 5000))
+        debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+        print(f"🚀 Server starting on http://localhost:{port}")
+        print(f"🔧 Debug mode: {debug_mode}")
+        print("👉 Login as admin: admin / admin123")
+        app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    except Exception as e:
+        print(f"❌ Error starting server: {e}")
+        import traceback
+        traceback.print_exc()
