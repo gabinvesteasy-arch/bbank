@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Simple Bank Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .admin-header {
+            background: var(--primary);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .admin-sidebar {
+            background: white;
+            min-height: calc(100vh - 76px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            padding: 0;
+        }
+        
+        .admin-sidebar .nav-link {
+            color: #2c3e50;
+            padding: 15px 20px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .admin-sidebar .nav-link:hover, .admin-sidebar .nav-link.active {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+            border-left-color: #3498db;
+        }
+        
+        .admin-content {
+            padding: 30px;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-top: 5px solid var(--secondary);
+            transition: transform 0.3s;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stats-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .stats-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .table-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .btn-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .btn-approved { background: #d4edda; color: #155724; }
+        .btn-rejected { background: #f8d7da; color: #721c24; }
+        .btn-processing { background: #fff3cd; color: #856404; }
+        .btn-completed { background: #cce5ff; color: #004085; }
+        
+        .action-form {
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            background: var(--primary);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            padding: 20px;
+            border: none;
+        }
+        
+        .btn-admin {
+            padding: 8px 20px;
+            border-radius: 10px;
+            font-weight: 500;
+            border: none;
+            transition: all 0.3s;
+        }
+        
+        .btn-admin-primary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-admin-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .notes-input {
+            font-size: 0.85rem;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: 200px;
+        }
+        
+        .quick-actions {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        
+        .action-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Admin Header -->
+    <header class="admin-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h3><i class="fas fa-crown"></i> Admin Panel</h3>
+                    <p class="mb-0">Welcome, {{ user.username }} (Administrator)</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-admin btn-admin-primary me-2">
+                        <i class="fas fa-user"></i> User Dashboard
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-light">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 admin-sidebar">
+                <ul class="nav flex-column mt-4">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#add-funds">
+                            <i class="fas fa-money-bill-wave"></i> Add Funds
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#withdrawals">
+                            <i class="fas fa-money-check-alt"></i> Withdrawals
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#transactions">
+                            <i class="fas fa-exchange-alt"></i> Transactions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#users">
+                            <i class="fas fa-users"></i> Users
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 admin-content">
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }} alert-dismissible fade show">
+                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'danger' else 'check-circle' }}"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Statistics -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-value">{{ total_users }}</div>
+                            <div class="stats-label">Total Users</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-value">{{ total_accounts }}</div>
+                            <div class="stats-label">Total Accounts</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-value">${{ "%.2f"|format(total_balance) }}</div>
+                            <div class="stats-label">Total Balance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-value">{{ pending_withdrawals|length }}</div>
+                            <div class="stats-label">Pending Withdrawals</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h4 class="mb-4">
+                        <i class="fas fa-bolt me-2"></i> Quick Actions
+                    </h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="action-item">
+                                <i class="fas fa-plus-circle fa-2x text-success"></i>
+                                <div>
+                                    <h6 class="mb-1">Add Funds to User</h6>
+                                    <p class="mb-0 text-muted">Add money to any user account</p>
+                                </div>
+                                <button class="btn btn-admin btn-admin-primary ms-auto" 
+                                        data-bs-toggle="modal" data-bs-target="#addFundsModal">
+                                    Add Funds
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="action-item">
+                                <i class="fas fa-search-dollar fa-2x text-primary"></i>
+                                <div>
+                                    <h6 class="mb-1">View All Transactions</h6>
+                                    <p class="mb-0 text-muted">See complete transaction history</p>
+                                </div>
+                                <a href="#transactions" class="btn btn-admin btn-admin-primary ms-auto">
+                                    View All
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Funds Form -->
+                <div class="table-card" id="add-funds">
+                    <h4 class="mb-4">
+                        <i class="fas fa-money-bill-wave me-2"></i> Add Funds to User Account
+                    </h4>
+                    
+                    <form method="POST" action="{{ url_for('add_deposit') }}">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="userSelect" class="form-label">Select User</label>
+                                <select class="form-select" id="userSelect" name="user_id" required>
+                                    <option value="">Choose user...</option>
+                                    {% for user in all_users %}
+                                    <option value="{{ user.id }}">
+                                        {{ user.username }} - {{ user.email }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="depositAmount" class="form-label">Amount (USD)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" min="0.01" class="form-control" 
+                                           id="depositAmount" name="amount" placeholder="Amount" required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-5 mb-3">
+                                <label for="depositDescription" class="form-label">Description</label>
+                                <input type="text" class="form-control" id="depositDescription" 
+                                       name="description" placeholder="Enter transaction description (visible to user)">
+                            </div>
+                            
+                            <div class="col-md-8 mb-3">
+                                <label for="adminNotes" class="form-label">Admin Notes (Internal)</label>
+                                <textarea class="form-control" id="adminNotes" name="admin_notes" 
+                                          rows="2" placeholder="Internal notes (not visible to user)"></textarea>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-admin btn-admin-primary w-100">
+                                    <i class="fas fa-plus-circle me-2"></i> Add Funds
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Pending Withdrawals -->
+                <div class="table-card" id="withdrawals">
+                    <h4 class="mb-4">
+                        <i class="fas fa-clock me-2"></i> Pending Withdrawals
+                        <span class="badge bg-warning ms-2">{{ pending_withdrawals|length }}</span>
+                    </h4>
+                    
+                    {% if pending_withdrawals %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>User</th>
+                                        <th>Bank</th>
+                                        <th>Amount</th>
+                                        <th>Account</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for withdrawal in pending_withdrawals %}
+                                    <tr>
+                                        <td>#{{ withdrawal.id }}</td>
+                                        <td>
+                                            <strong>{{ withdrawal.user.username }}</strong><br>
+                                            <small class="text-muted">{{ withdrawal.user.email }}</small>
+                                        </td>
+                                        <td>
+                                            {{ withdrawal.bank_name }}<br>
+                                            <small class="text-muted">{{ withdrawal.bank_country }}</small>
+                                        </td>
+                                        <td class="fw-bold text-danger">${{ "%.2f"|format(withdrawal.amount) }}</td>
+                                        <td>
+                                            {{ withdrawal.account_number }}<br>
+                                            <small class="text-muted">{{ withdrawal.account_holder }}</small>
+                                        </td>
+                                        <td>{{ withdrawal.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            <div class="d-flex flex-column gap-2">
+                                                <form method="POST" action="{{ url_for('update_withdrawal', withdrawal_id=withdrawal.id) }}" class="action-form">
+                                                    <input type="text" class="notes-input mb-2" name="admin_notes" placeholder="Add notes...">
+                                                    <div class="btn-group">
+                                                        <button type="submit" name="status" value="approved" 
+                                                                class="btn btn-sm btn-success">
+                                                            <i class="fas fa-check"></i> Approve
+                                                        </button>
+                                                        <button type="submit" name="status" value="completed" 
+                                                                class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-check-double"></i> Complete
+                                                        </button>
+                                                        <button type="submit" name="status" value="rejected" 
+                                                                class="btn btn-sm btn-danger">
+                                                            <i class="fas fa-times"></i> Reject
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-check-circle fa-3x text-success"></i>
+                            <p class="text-muted mt-3">No pending withdrawals</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="table-card" id="transactions">
+                    <h4 class="mb-4">
+                        <i class="fas fa-exchange-alt me-2"></i> Recent Transactions
+                        <button class="btn btn-sm btn-admin btn-admin-primary float-end" 
+                                data-bs-toggle="modal" data-bs-target="#editTransactionModal">
+                            <i class="fas fa-edit"></i> Edit Transactions
+                        </button>
+                    </h4>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Admin Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in recent_transactions %}
+                                <tr>
+                                    <td>#{{ transaction.id }}</td>
+                                    <td>{{ transaction.user.username }}</td>
+                                    <td>
+                                        {% if transaction.type == 'deposit' %}
+                                            <span class="badge bg-success">Deposit</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Withdraw</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold">
+                                        {% if transaction.type == 'deposit' %}
+                                            <span class="text-success">+${{ "%.2f"|format(transaction.amount) }}</span>
+                                        {% else %}
+                                            <span class="text-danger">-${{ "%.2f"|format(transaction.amount) }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.description }}</td>
+                                    <td>
+                                        {% if transaction.status == 'completed' %}
+                                            <span class="btn-status btn-completed">Completed</span>
+                                        {% elif transaction.status == 'pending' %}
+                                            <span class="btn-status btn-processing">Processing</span>
+                                        {% else %}
+                                            <span class="btn-status btn-rejected">{{ transaction.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if transaction.admin_notes %}
+                                            <small class="text-muted">{{ transaction.admin_notes }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Edit Transactions Section -->
+                <div class="table-card" id="edit-transactions">
+                    <h4 class="mb-4">
+                        <i class="fas fa-edit me-2"></i> Edit Transactions
+                    </h4>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in recent_transactions %}
+                                <tr>
+                                    <td>#{{ transaction.id }}</td>
+                                    <td>{{ transaction.user.username }}</td>
+                                    <td>
+                                        {% if transaction.type == 'deposit' %}
+                                            <span class="badge bg-success">Deposit</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Withdraw</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('edit_transaction', transaction_id=transaction.id) }}" 
+                                              class="d-inline-block">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" step="0.01" min="0.01" 
+                                                       class="form-control" name="amount" 
+                                                       value="{{ transaction.amount }}" style="width: 120px;">
+                                            </div>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" 
+                                               name="description" value="{{ transaction.description }}">
+                                    </td>
+                                    <td>
+                                        {% if transaction.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif transaction.status == 'pending' %}
+                                            <span class="badge bg-warning">Processing</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ transaction.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   name="admin_notes" placeholder="Admin notes" 
+                                                   value="{{ transaction.admin_notes or '' }}">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-save"></i> Save
+                                            </button>
+                                        </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Users List -->
+                <div class="table-card" id="users">
+                    <h4 class="mb-4">
+                        <i class="fas fa-users me-2"></i> All Users ({{ all_users|length }})
+                    </h4>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Account Number</th>
+                                    <th>Balance</th>
+                                    <th>Joined</th>
+                                    <th>Role</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user_item in all_users %}
+                                <tr>
+                                    <td>#{{ user_item.id }}</td>
+                                    <td>
+                                        <strong>{{ user_item.username }}</strong>
+                                        {% if user_item.id == user.id %}
+                                            <span class="badge bg-primary ms-1">You</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user_item.email }}</td>
+                                    <td>
+                                        {% if user_item.accounts %}
+                                            {{ user_item.accounts[0].account_number }}
+                                        {% else %}
+                                            <span class="text-muted">No account</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold">
+                                        {% if user_item.accounts %}
+                                            ${{ "%.2f"|format(user_item.accounts[0].balance) }}
+                                        {% else %}
+                                            $0.00
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user_item.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% if user_item.is_admin %}
+                                            <span class="badge bg-danger">Admin</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">User</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Funds Modal -->
+    <div class="modal fade" id="addFundsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-money-bill-wave me-2"></i> Quick Add Funds</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{{ url_for('add_deposit') }}">
+                        <div class="mb-3">
+                            <label for="quickUserSelect" class="form-label">Select User</label>
+                            <select class="form-select" id="quickUserSelect" name="user_id" required>
+                                <option value="">Choose user...</option>
+                                {% for user in all_users %}
+                                <option value="{{ user.id }}">{{ user.username }} - {{ user.email }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="quickAmount" class="form-label">Amount (USD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" min="0.01" class="form-control" 
+                                       id="quickAmount" name="amount" placeholder="Enter amount" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="quickDescription" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="quickDescription" 
+                                   name="description" placeholder="Transaction description">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-admin btn-admin-primary">
+                                <i class="fas fa-plus-circle me-2"></i> Add Funds
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-dismiss alerts
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Form validation
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const amountInput = this.querySelector('input[name="amount"]');
+                if (amountInput && parseFloat(amountInput.value) <= 0) {
+                    e.preventDefault();
+                    alert('Amount must be greater than 0');
+                }
+            });
+        });
+
+        // Auto-focus on modal input
+        document.getElementById('addFundsModal').addEventListener('shown.bs.modal', function () {
+            document.getElementById('quickUserSelect').focus();
+        });
+    </script>
+</body>
+</html>
